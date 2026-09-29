@@ -23,6 +23,24 @@ import {
 } from 'lucide-react'
 
 type Meal = { name: string; description: string; cost: string; protein: string; kcal: string; tags: string[] }
+type OptimizerMode = 'demo' | 'backend'
+type OptimizationResult = { dailyCost: number; budgetRemaining: number; nutritionCoverage: number; ironCoverage: number; changeSummary: string }
+
+function optimizePlan(input: { budget: number; ingredientsAvailable: boolean; mode: OptimizerMode }): OptimizationResult {
+  if (input.mode === 'backend') {
+    return { dailyCost: 17420, budgetRemaining: Math.max(input.budget - 17420, 0), nutritionCoverage: 92, ironCoverage: 84, changeSummary: 'Backend service connection is ready for the production optimizer.' }
+  }
+
+  const constrainedBudget = Math.min(Math.max(input.budget, 12000), 18000)
+  const isTighterBudget = constrainedBudget < 16000
+  return {
+    dailyCost: isTighterBudget ? 14860 : 17420,
+    budgetRemaining: Math.max(constrainedBudget - (isTighterBudget ? 14860 : 17420), 0),
+    nutritionCoverage: isTighterBudget ? 89 : 92,
+    ironCoverage: isTighterBudget ? 82 : 84,
+    changeSummary: isTighterBudget ? 'Paneer Curry → Chana Curry. Lower cost while maintaining dietary compatibility.' : 'The current plan already fits the selected budget and constraints.',
+  }
+}
 
 const mealDetails: Record<string, Meal> = {
   'Idli + Milk': { name: 'Idli + Milk', description: 'Steamed rice cakes with a serving of milk.', cost: '₹18', protein: '11g', kcal: '420 kcal', tags: ['Vegetarian', 'Available ingredients'] },
@@ -70,6 +88,8 @@ export default function Page() {
   const [budget, setBudget] = useState(15000)
   const [reoptimized, setReoptimized] = useState(false)
   const [ingredientsOpen, setIngredientsOpen] = useState(false)
+  const [optimizerMode, setOptimizerMode] = useState<OptimizerMode>('demo')
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult>(() => optimizePlan({ budget: 15000, ingredientsAvailable: true, mode: 'demo' }))
 
   const nav = [
     { label: 'Overview', icon: BarChart3 },
@@ -90,11 +110,11 @@ export default function Page() {
       </aside>
 
       <main className="main-content">
-        <header className="topbar"><button className="mobile-menu" aria-label="Open menu"><Menu size={19} /></button><div className="breadcrumb"><span>Plans</span><ChevronRight size={14} /><strong>Week 1</strong></div><div className="topbar-actions"><span className="saved"><span className="status-dot" />All changes saved</span><button className="icon-button" aria-label="Toggle sidebar"><PanelLeft size={17} /></button><div className="user-avatar">AS</div></div></header>
+        <header className="topbar"><button className="mobile-menu" aria-label="Open menu"><Menu size={19} /></button><div className="breadcrumb"><span>Plans</span><ChevronRight size={14} /><strong>Week 1</strong></div><div className="topbar-actions"><span className="mode-badge"><span className="status-dot" />{optimizerMode === 'demo' ? 'Demo / mock mode' : 'Backend mode'}</span><span className="saved"><span className="status-dot" />All changes saved</span><button className="icon-button" aria-label="Toggle sidebar"><PanelLeft size={17} /></button><div className="user-avatar">AS</div></div></header>
         <div className="page-wrap">
-          <div className="page-heading"><div><div className="eyebrow">WEEK 1 · 7 DAYS <span className="pill success"><Check size={12} /> Feasible</span></div><h1>Your optimized meal plan</h1><p>A practical plan for 500 people, balanced across cost, nutrition, and available ingredients.</p></div><button className="outline-button" onClick={() => setWhatIfOpen(true)}><SlidersHorizontal size={16} /> What if something changes?</button></div>
+          <div className="page-heading"><div><div className="eyebrow">WEEK 1 · 7 DAYS <span className="pill success"><Check size={12} /> Feasible</span></div><h1>Your optimized meal plan</h1><p>A practical plan for 500 people, balanced across cost, nutrition, and available ingredients.</p></div><div className="heading-actions"><button className="mode-toggle" onClick={() => setOptimizerMode(optimizerMode === 'demo' ? 'backend' : 'demo')}><Database size={15} /> Use {optimizerMode === 'demo' ? 'backend' : 'demo'} mode</button><button className="outline-button" onClick={() => setWhatIfOpen(true)}><SlidersHorizontal size={16} /> What if something changes?</button></div></div>
 
-          <section className="summary-grid" aria-label="Plan summary"><div className="summary-card primary"><span>Daily cost</span><strong>₹{reoptimized ? '14,860' : '17,420'}</strong><small><span className="positive">↓ 3.2%</span> from your budget</small></div><div className="summary-card"><span>Budget remaining</span><strong>₹{reoptimized ? '140' : '580'}</strong><small>of ₹18,000 daily limit</small></div><div className="summary-card"><span>Nutrition coverage</span><strong>{reoptimized ? '89' : '92'}<em>%</em></strong><small><span className="warning-text">Iron is at 84%</span></small></div><div className="summary-card"><span>People served</span><strong>500</strong><small><span className="positive"><Check size={13} /> At kitchen capacity</span></small></div></section>
+          <section className="summary-grid" aria-label="Plan summary"><div className="summary-card primary"><span>Daily cost</span><strong>₹{optimizationResult.dailyCost.toLocaleString('en-IN')}</strong><small><span className="positive">↓ 3.2%</span> from your budget</small></div><div className="summary-card"><span>Budget remaining</span><strong>₹{optimizationResult.budgetRemaining.toLocaleString('en-IN')}</strong><small>of ₹{budget.toLocaleString('en-IN')} daily limit</small></div><div className="summary-card"><span>Nutrition coverage</span><strong>{optimizationResult.nutritionCoverage}<em>%</em></strong><small><span className="warning-text">Iron is at {optimizationResult.ironCoverage}%</span></small></div><div className="summary-card"><span>People served</span><strong>500</strong><small><span className="positive"><Check size={13} /> At kitchen capacity</span></small></div></section>
 
           <div className="content-grid"><section className="main-column">
             <div className="section-header"><div><h2>7-day meal plan</h2><p>Click any meal to see its cost and nutrition details.</p></div><button className="text-button" onClick={() => setIngredientsOpen(!ingredientsOpen)}>{ingredientsOpen ? 'Hide ingredients' : 'View ingredients'} <ArrowRight size={15} /></button></div>
@@ -111,7 +131,7 @@ export default function Page() {
 
       {selectedMeal && <div className="modal-backdrop" onClick={() => setSelectedMeal(null)}><div className="meal-modal" onClick={(e) => e.stopPropagation()}><button className="modal-close" onClick={() => setSelectedMeal(null)} aria-label="Close meal details"><X size={18} /></button><div className="meal-modal-kicker">MEAL DETAILS</div><h2>{selectedMeal.name}</h2><p>{selectedMeal.description}</p><div className="meal-stats"><div><span>Cost / person</span><strong>{selectedMeal.cost}</strong></div><div><span>Protein</span><strong>{selectedMeal.protein}</strong></div><div><span>Energy</span><strong>{selectedMeal.kcal}</strong></div></div><h4>Why it qualifies</h4><div className="tag-list">{selectedMeal.tags.map((tag) => <span className="pill success" key={tag}><Check size={12} /> {tag}</span>)}</div><button className="dark-button full" onClick={() => setSelectedMeal(null)}>Close details</button></div></div>}
 
-      {whatIfOpen && <div className="modal-backdrop" onClick={() => setWhatIfOpen(false)}><div className="whatif-modal" onClick={(e) => e.stopPropagation()}><div className="modal-header"><div><div className="meal-modal-kicker">WHAT-IF PLANNER</div><h2>Explore a trade-off</h2><p>Adjust a constraint to see how the plan responds.</p></div><button className="modal-close" onClick={() => setWhatIfOpen(false)} aria-label="Close what-if planner"><X size={18} /></button></div><label className="range-label"><span>Daily budget</span><strong>₹{budget.toLocaleString('en-IN')}</strong></label><input className="budget-range" type="range" min="12000" max="18000" step="500" value={budget} onChange={(e) => { setBudget(Number(e.target.value)); setReoptimized(false) }} /><div className="range-endpoints"><span>₹12,000</span><span>₹18,000</span></div><div className="whatif-fields"><label>Ingredient availability<select><option>All ingredients available</option><option>Milk unavailable</option></select></label><label>People served<input value="500 people" readOnly /></label></div>{reoptimized ? <div className="updated-result"><div className="update-title"><span className="check-circle"><Check size={13} /></span><strong>Plan updated</strong></div><div className="comparison"><div><span>Before</span><strong>₹17,420</strong><small>92% nutrition</small></div><ArrowRight size={17} /><div><span>After</span><strong>₹14,860</strong><small>89% nutrition</small></div></div><p><strong>Change summary:</strong> Paneer Curry → Chana Curry. Lower cost while maintaining dietary compatibility.</p></div> : <div className="whatif-preview"><strong>At ₹{budget.toLocaleString('en-IN')}, the optimizer may adjust higher-cost meals first.</strong><span>Nutrition and availability will be checked again.</span></div>}<button className="dark-button full" onClick={() => setReoptimized(true)}><RefreshCw size={15} /> Re-optimize plan</button></div></div>}
+      {whatIfOpen && <div className="modal-backdrop" onClick={() => setWhatIfOpen(false)}><div className="whatif-modal" onClick={(e) => e.stopPropagation()}><div className="modal-header"><div><div className="meal-modal-kicker">WHAT-IF PLANNER</div><h2>Explore a trade-off</h2><p>Adjust a constraint to see how the plan responds.</p></div><button className="modal-close" onClick={() => setWhatIfOpen(false)} aria-label="Close what-if planner"><X size={18} /></button></div><label className="range-label"><span>Daily budget</span><strong>₹{budget.toLocaleString('en-IN')}</strong></label><input className="budget-range" type="range" min="12000" max="18000" step="500" value={budget} onChange={(e) => { setBudget(Number(e.target.value)); setReoptimized(false) }} /><div className="range-endpoints"><span>₹12,000</span><span>₹18,000</span></div><div className="whatif-fields"><label>Ingredient availability<select><option>All ingredients available</option><option>Milk unavailable</option></select></label><label>People served<input value="500 people" readOnly /></label></div>{reoptimized ? <div className="updated-result"><div className="update-title"><span className="check-circle"><Check size={13} /></span><strong>Plan updated</strong></div><div className="comparison"><div><span>Before</span><strong>₹17,420</strong><small>92% nutrition</small></div><ArrowRight size={17} /><div><span>After</span><strong>₹{optimizationResult.dailyCost.toLocaleString('en-IN')}</strong><small>{optimizationResult.nutritionCoverage}% nutrition</small></div></div><p><strong>Change summary:</strong> {optimizationResult.changeSummary}</p></div> : <div className="whatif-preview"><strong>At ₹{budget.toLocaleString('en-IN')}, the optimizer may adjust higher-cost meals first.</strong><span>Nutrition and availability will be checked again.</span></div>}<button className="dark-button full" onClick={() => { setOptimizationResult(optimizePlan({ budget, ingredientsAvailable: true, mode: optimizerMode })); setReoptimized(true) }}><RefreshCw size={15} /> Re-optimize plan</button></div></div>}
     </div>
   )
 }
